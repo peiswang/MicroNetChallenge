@@ -8,9 +8,9 @@ python test.py --resume ./model/densenet-100.pth.tar --data-root ../../cifar
 
 ## Args :
 * --resume : `string`, the path to merged pruned quantized model
-* --half : `string`, can be one of 'True' or 'False', default is 'False', whether to run the network with half precision
+* --half : `string`, can be either 'True' or 'False', default is 'False', whether to run the network with half precision
 * --data-root : `string`, the root directory of cifar100 dataset. Please insure that you have already downloaded the cifar100
-                dataset and sotred in the data-root directory. If not, you can download it with torchvision.
+                dataset and placed in the data-root directory. If not, please download it with torchvision.
 
 ## Our accuracy : 
 |   float32   |  float16    |
