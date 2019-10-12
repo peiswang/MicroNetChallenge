@@ -15,6 +15,8 @@ We merge the scale layer into the convolution and inner-product layers:
 
 where ![equation](http://latex.codecogs.com/gif.latex?*) refers to the convolution operation.
 
+We prune the small weights and quantize the remaining weights and activations to low-bit.
+
 ## Convolution and inner-product layer :
 * Op :
   1. Accumulation : 
