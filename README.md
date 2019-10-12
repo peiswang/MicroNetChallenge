@@ -1,6 +1,6 @@
 # MicroNetChallenge
 
-MicroNet Challenge CIFAR100 Track
+MicroNet Challenge CIFAR100 Track : score 0.004169
 
 ### Dependency
 * torch 1.0.1
