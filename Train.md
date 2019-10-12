@@ -1,16 +1,18 @@
-# Claim
+# Codebase
 
-* The main codes are modified from [pytorch-classification](https://github.com/bearpaw/pytorch-classification)
-* The codes for data augmentation are modified from [AutoAugment](https://github.com/tensorflow/models/tree/master/research/autoaugment)
+* The codes for training are mainly based on [pytorch-classification](https://github.com/bearpaw/pytorch-classification)
+* The codes for data augmentation are based on [AutoAugment](https://github.com/tensorflow/models/tree/master/research/autoaugment)
 
-# Data Augmentation
+# Method
+
+## Data Augmentation
 Inspired by [AutoAugment](https://arxiv.org/pdf/1805.09501.pdf), we use the similar data augmentation policy.
 In AutoAugment, a policy contains multiple subpolicies, each subpolicy contains 2 tuples of 
 <O, P, L>, each tuple says that: the corresponding operation O is applied 
 on the input data with probability of P and 'magnitude' of L. For different operations, 'magnitude' has 
 different meanings, for eaxmple, for Rotation operation, the 'magnitude' denotes the digree of rotation.
-For each input, it first selects a subpolicy randomly in multiple subpolicies, each subpolicy is applied 
-on the input data with corresponding probability and magnitude in sequence.
+For each input, it first selects a subpolicy randomly in multiple subpolicies, each of 2 operations in 
+the selected subpolicies is applied on the input data with corresponding probability and magnitude in sequence.
 
 AutoAugment can observably improve the network performance, however, the policy they used on cifar100 
 was searched on cifar10 dataset, which is not allowed to use in this challenge. So we use a simplified 
@@ -18,39 +20,28 @@ policy. Our policy consists of 14 tuples of <O, P, L>. For each input, we random
 apply these two operations with corresponding probability and magnitude in sequence, the policy we 
 use can be seen at [transform.py](https://github.com/wps712/MicroNet/blob/cifar100/transform.py)
 
-# Training
+## Training schedular
+Our training schedular can be decomposed into 8 steps:
+* train the teacher net (densenet with depth of 172 and growthrate of 30) from scratch (300 epochs)
+* train the student net (densenet with depth of 100 and growthrate of 12) from scratch (300epochs)
+* prune the convolution layers of student net with sparsity of 75%, train with teacher-student (300 epochs)
+* quantize the activations of convolution layers of student net to 4bit, exclude the first convolution layer, train with teacher-student (300 epochs)
+* quantize the weights of convolution layers of student net to 4bit, train with teacher-student (300 epochs)
+* update means and vars for BN layers, to do that, simply set the student net to train mode, and run network forward on train-set for 
+  10 epochs
+* prune the weight of fc layer with sparsity of 50%, train with teacher-student (50 epochs, previous layers fixed)
+* quantize the weight of fc layer to 4bit, train with teacher-student (50 epochs, previous layers fixed)
 
-## train the teacher net from scratch
-```
-python cifar.py -a densenet --dataset cifar100 --depth 172 --growthRate 30 --train-batch 64 --epochs 300 --schedule 100 200 250 --wd 1e-4 --gamma 0.5 --lr 0.1 --checkpoint densenet-172/checkpoint --gpu-id '4,5,6,7' --no-bias-decay 'False' --lr-schedular 'WarmupCosine' --warm-up-epochs 5 --base-lr 0.001
-``` 
+## Optimizing 
+### Learning rate
+For step 1 and 2, we use 5 epochs to warmup the learning rate from 0.001 to 0.1, and use consine learning 
+rate for the ramaining epochs. For other steps for network compression, we use cosine learning rate without 
+warmup. For those steps for compression of convolution layers, we set the initial learning rate to 0.001. 
+For those steps for compression of fc layer, we set the initial learning rate to 0.0001
 
-## train the student net from scratch
-```
-python cifar.py -a densenet --dataset cifar100 --depth 100 --growthRate 12 --train-batch 64 --epochs 300 --schedule 100 200 250 --wd 1e-4 --gamma 0.5 --lr 0.1 --checkpoint checkpoint/warmup_cosine/augv1 --gpu-id 0 --no-bias-decay 'False' --lr-schedular 'WarmupCosine' --loss 'CrossEntropy' --warm-up-epochs 5 --base-lr 0.001
-```
+### weight-decay and momentum
+We set the weight decay to 1e-4, and momentum to 0.9
 
-## prune the weights of convolution layers, train with teacher-student
-```
-python train_sparse_teacher_student.py --resume-optimizer-state False --resume checkpoint/warmup_cosine/model_best.pth.tar --student-id 4 --teacher-id 4 --output-id 4 --loss kldiv:1 --checkpoint sparse/checkpoint/75/teacher_student/kldiv/1 --teacher densenet-190/checkpoint/model_best.pth.tar --rate 0.75 --lr 0.001 --warm-up-epochs 0
-``` 
-
-## quantize the activation of convolution layers, train with teacher-student
-```
-python train_sparse_quant_act_teacher_student.py --lr 0.001  --warm-up-epochs 0 --loss kldiv:1 --teacher densenet-190/checkpoint/model_best.pth.tar --teacher-id 0 --student-id 0 --output-id 0 --resume model_best.pth.tar --checkpoint sparse_quant/a4 --update-stop-iter 0 --resume-optimizer-state False --act-bitwidth 4
-```
-
-## quantize the weight of convolution layers, train with teacher-student
-```
-python train_sparse_quant_act_quant_weight_teacher_student.py --lr 0.001 --warm-up-epochs 0 --loss kldiv:1 --teacher densenet-190/checkpoint/model_best.pth.tar --teacher-id 0 --student-id 0 --output-id 0 --resume sparse_quant/a4/model_best.pth.tar.cpu --resume-optimizer-state False --checkpoint sparse_quant/a4/w4 --weight-bitwidth 4
-```
-
-## update parameters of bn layers
-```
-python update_bn.py --resume sparse_quant/a4/w4/model_best.pth.tar --weight-bitwidth 4
-```
-
-## prune the weight of last fc layer, train with teacher-student
-```
-
-```
+### Loss
+For step 1 and 2, we use the cross entropy loss.
+For those steps training with teacher-student, we use the kl divergence loss
