@@ -1,9 +1,13 @@
 # MicroNetChallenge
 
 ## Dependency
+
 pytorch-1.0.0
+
 torchvision-0.2.1
+
 numpy-1.14.3
+
 PIL-5.1.0
 
 ## MicroNet Challenge ImageNet Track
