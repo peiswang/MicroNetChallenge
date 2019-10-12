@@ -11,6 +11,6 @@ python test.py --resume ./model/densenet-100.pth.tar
 * --half : `string`, can be one of 'True' or 'False', default is 'False', whether to run the network with half precision
 
 ## Our accuracy : 
-|   float32   |  float16   |
-|-------------|------------|
-|  **80.39%** |  **80.17** |
+|   float32   |  float16    |
+|-------------|-------------|
+|  **80.39%** |  **80.17%** |
