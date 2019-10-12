@@ -285,33 +285,6 @@ def count_avgpool2d(module, input, output):
     module.total_ops += total_ops
     module.total_params = 0
 
-
-# def count_adap_avgpool2d(module, input, output):
-#     #count flops for single input
-#     input = input[0]
-#     output = output[0]
-# 
-#     input_h = input.size(1)
-#     input_w = input.size(2)
-#     if isinstance(module.output_size, tuple):
-#         output_h = module.output_size[0]
-#         output_w = module.output_size[1]
-#     else:
-#         output_h = output_w = module.output_size
-#     kh = (input_h + output_h - 1) // output_h
-#     kw = (input_w + output_w - 1) // output_w
-# 
-#     add_per_output = kh * kw - 1
-#     mul_per_out = 1
-#     MAC_per_out = add_per_output + mul_per_out
-# 
-#     num_elements = output.numel()
-#     total_ops = MAC_per_out * num_elements / 2.
-# 
-#     module.total_ops += total_ops
-#     module.total_params = 0
-
-
 def count_sigmoid(module, input, output):
     #count flops for single input
     input = input[0]
