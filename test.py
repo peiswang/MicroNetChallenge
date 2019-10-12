@@ -20,6 +20,8 @@ parser.add_argument('--test-batch', default = 64, type = int)
 parser.add_argument('--resume', default = None, type = str,
                     help = 'Resume from model')
 parser.add_argument('--half', default = 'False', type = str)
+parser.add_argument('--data-root',  default = '.', type = str,
+                   help = 'The root directory of CIFAR100 dataset.')
 
 args = parser.parse_args()
 
@@ -28,7 +30,7 @@ def main():
   student_ids = [int(id) for id in args.student_id.split(',')]
 
   # Prepare dataset
-  test_set = autoaug_dataset.CIFAR100(root = '../../cifar', train = False, scale = 255)
+  test_set = autoaug_dataset.CIFAR100(root = args.data_root, train = False, scale = 255)
   
   testloader = data.DataLoader(test_set, batch_size = args.test_batch, shuffle = False, num_workers = 4)
 
