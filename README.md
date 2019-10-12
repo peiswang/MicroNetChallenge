@@ -17,7 +17,7 @@
 
 * PIL-5.1.0
 
-#### score : 
+### score : 0.125144
 
 ## MicroNet Challenge Cifar100 Track
 ```
