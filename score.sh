@@ -1,1 +1,1 @@
-python score.py --resume /path/to/your/model --score-type 0
+python score.py --resume ./model/densenet-100.pth.tar --score-type 0
