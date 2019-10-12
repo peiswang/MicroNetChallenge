@@ -16,12 +16,12 @@ python score.py --resume ./model/densenet-100.pth.tar --score-type 0
 * --score-type :  `int`,
 
   * 0: Using adder tree in convolution accumulation and FP16 in all the other operations
-  * 1: Using [fixed-length](https://github.com/wps712/MicroNet/blob/2b35f8d6e2abeb3fa19d949be73ade8c5479b35b/flops_utils.py#L98) (without overflow) integers to accumulate convolution intermediate results and FP16 in all the other operations
+  * 1: Using [fixed-length](https://github.com/wps712/MicroNetChallenge/blob/e858966bd82a150abec52033237a9c48c97fbb62/flops_utils.py#L98) (without overflow) integers to accumulate convolution intermediate results and FP16 in all the other operations
   * 2: Using FP32 to accumulate intermediate results in convolution, average pooling and bias term, and FP16 in all the other operations
-  * 3: Using [fixed-length](https://github.com/wps712/MicroNet/blob/2b35f8d6e2abeb3fa19d949be73ade8c5479b35b/flops_utils.py#L98) (without overflow) integers to accumulate convolution intermediate results; FP32 to accumulate intermediate results in average pooling and bias term; FP16 in all the other operations
+  * 3: Using [fixed-length](https://github.com/wps712/MicroNetChallenge/blob/e858966bd82a150abec52033237a9c48c97fbb62/flops_utils.py#L98) (without overflow) integers to accumulate convolution intermediate results; FP32 to accumulate intermediate results in average pooling and bias term; FP16 in all the other operations
   * 4: Using adder tree in convolution accumulation; FP32 to accumulate intermediate results in average pooling and bias term; FP16 in all the other operations
   * 5: Using adder tree in convolution accumulation; FP32 to accumulate intermediate results in average pooling; FP16 in all the other operations
-  * 6: Using [fixed-length](https://github.com/wps712/MicroNet/blob/2b35f8d6e2abeb3fa19d949be73ade8c5479b35b/flops_utils.py#L98) (without overflow) integers to accumulate convolution intermediate results; FP32 to accumulate intermediate results in average pooling; FP16 in all the other operations
+  * 6: Using [fixed-length](https://github.com/wps712/MicroNetChallenge/blob/e858966bd82a150abec52033237a9c48c97fbb62/flops_utils.py#L98) (without overflow) integers to accumulate convolution intermediate results; FP32 to accumulate intermediate results in average pooling; FP16 in all the other operations
 
 ### Our scores : 
 score-type | op score | param score | final score
