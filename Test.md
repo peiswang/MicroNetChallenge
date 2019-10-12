@@ -12,5 +12,5 @@ CUDA_VISIBLE_DEVICES=0 python test.py --pretrained pretrained/mixnet_s_prune_qua
 * others : as default
 
 ### Our accuracy : 
-Top-1 : **75.044%**
-Top-5 : **92.246%**
+Top-1 : **75.034%**
+Top-5 : **92.218%**

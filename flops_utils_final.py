@@ -30,7 +30,7 @@ def adder_tree(base, length):
 def count_conv_linear_adder_tree(module, input, output):
     input = input[0]
     output = output[0]
-    # print(output.dim())
+
     if output.dim() == 3:
         C, H, W = output.shape
     else:
@@ -242,6 +242,8 @@ def count_conv_linear_adder_fp32(module, input, output):
 
 def count_quantization(module, input, output):
     input = input[0]
+    output = output[0]
+
     num_elements = input.numel()
     alpha = module.scale # min
     if alpha == 1.0:
@@ -272,40 +274,42 @@ def count_avgpool2d(module, input, output):
     input = input[0]
     output = output[0]
 
-    add_per_output = torch.prod(torch.Tensor([module.kernel_size])) - 1
+    N, C, H, W = input.shape
+    assert(C == output.numel())
+
+    add_per_output = H * W - 1
     mul_per_out = 1
     MAC_per_out = add_per_output + mul_per_out
-    num_elements = output.numel()
-    total_ops = MAC_per_out * num_elements / 2.
+    total_ops = MAC_per_out * C / 2.
 
     module.total_ops += total_ops
     module.total_params = 0
 
 
-def count_adap_avgpool2d(module, input, output):
-    #count flops for single input
-    input = input[0]
-    output = output[0]
-
-    input_h = input.size(1)
-    input_w = input.size(2)
-    if isinstance(module.output_size, tuple):
-        output_h = module.output_size[0]
-        output_w = module.output_size[1]
-    else:
-        output_h = output_w = module.output_size
-    kh = (input_h + output_h - 1) // output_h
-    kw = (input_w + output_w - 1) // output_w
-
-    add_per_output = kh * kw - 1
-    mul_per_out = 1
-    MAC_per_out = add_per_output + mul_per_out
-
-    num_elements = output.numel()
-    total_ops = MAC_per_out * num_elements / 2.
-
-    module.total_ops += total_ops
-    module.total_params = 0
+# def count_adap_avgpool2d(module, input, output):
+#     #count flops for single input
+#     input = input[0]
+#     output = output[0]
+# 
+#     input_h = input.size(1)
+#     input_w = input.size(2)
+#     if isinstance(module.output_size, tuple):
+#         output_h = module.output_size[0]
+#         output_w = module.output_size[1]
+#     else:
+#         output_h = output_w = module.output_size
+#     kh = (input_h + output_h - 1) // output_h
+#     kw = (input_w + output_w - 1) // output_w
+# 
+#     add_per_output = kh * kw - 1
+#     mul_per_out = 1
+#     MAC_per_out = add_per_output + mul_per_out
+# 
+#     num_elements = output.numel()
+#     total_ops = MAC_per_out * num_elements / 2.
+# 
+#     module.total_ops += total_ops
+#     module.total_params = 0
 
 
 def count_sigmoid(module, input, output):
@@ -328,18 +332,8 @@ def count_swish(module, input, output):
     module.total_ops += total_ops
     module.total_params = 0
 
-def count_pointproduct(module, input, output):
-    #count flops for single input
-    x1 = input[0][0]
-    x2 = input[1][0]
-    output = output[0]
 
-    total_ops = max(x1.numel(), x2.numel()) / 2.0
-    module.total_ops += total_ops
-    module.total_params = 0
-    
-
-def count_pointadd(module, input, output):
+def count_eltwise(module, input, output):
     #count flops for single input
     x1 = input[0][0]
     x2 = input[1][0]
@@ -354,10 +348,9 @@ __hook_fn_dict_adder_fp32__ = {
     nn.ReLU: count_relu,
     nn.Sigmoid: count_sigmoid,
     Swish: count_swish,
-    PointProduct: count_pointproduct,
-    PointAdd: count_pointadd,    
-    nn.AvgPool2d: count_avgpool2d,  
-    nn.AdaptiveAvgPool2d: count_adap_avgpool2d,
+    PointProduct: count_eltwise,
+    PointAdd: count_eltwise,    
+    AvgPool: count_avgpool2d,  
     nn.Linear: count_conv_linear_adder_fp32,
     Quantization: count_quantization,
 }
@@ -367,10 +360,9 @@ __hook_fn_dict_adder_fp16__ = {
     nn.ReLU: count_relu,
     nn.Sigmoid: count_sigmoid,
     Swish: count_swish,
-    PointProduct: count_pointproduct,
-    PointAdd: count_pointadd,    
-    nn.AvgPool2d: count_avgpool2d,  
-    nn.AdaptiveAvgPool2d: count_adap_avgpool2d,
+    PointProduct: count_eltwise,
+    PointAdd: count_eltwise,    
+    AvgPool: count_avgpool2d,  
     nn.Linear: count_conv_linear_adder_fp16,
     Quantization: count_quantization,
 }
@@ -380,10 +372,9 @@ __hook_fn_dict_adder_int__ = {
     nn.ReLU: count_relu,
     nn.Sigmoid: count_sigmoid,
     Swish: count_swish,
-    PointProduct: count_pointproduct,
-    PointAdd: count_pointadd,    
-    nn.AvgPool2d: count_avgpool2d,  
-    nn.AdaptiveAvgPool2d: count_adap_avgpool2d,
+    PointProduct: count_eltwise,
+    PointAdd: count_eltwise,    
+    AvgPool: count_avgpool2d,  
     nn.Linear: count_conv_linear_adder_int,
     Quantization: count_quantization,
 }
@@ -393,10 +384,9 @@ __hook_fn_dict_adder_int16__ = {
     nn.ReLU: count_relu,
     nn.Sigmoid: count_sigmoid,
     Swish: count_swish,
-    PointProduct: count_pointproduct,
-    PointAdd: count_pointadd,    
-    nn.AvgPool2d: count_avgpool2d,  
-    nn.AdaptiveAvgPool2d: count_adap_avgpool2d,
+    PointProduct: count_eltwise,
+    PointAdd: count_eltwise,    
+    AvgPool: count_avgpool2d,  
     nn.Linear: count_conv_linear_adder_int16,
     Quantization: count_quantization,
 }
@@ -406,10 +396,9 @@ __hook_fn_dict_adder_tree__ = {
     nn.ReLU: count_relu,
     nn.Sigmoid: count_sigmoid,
     Swish: count_swish,
-    PointProduct: count_pointproduct,
-    PointAdd: count_pointadd,    
-    nn.AvgPool2d: count_avgpool2d,  
-    nn.AdaptiveAvgPool2d: count_adap_avgpool2d,
+    PointProduct: count_eltwise,
+    PointAdd: count_eltwise,    
+    AvgPool: count_avgpool2d,  
     nn.Linear: count_conv_linear_adder_tree,
     Quantization: count_quantization,
 }

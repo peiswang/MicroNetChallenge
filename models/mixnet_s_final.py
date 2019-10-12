@@ -136,7 +136,8 @@ class SqueezeExcitation(nn.Module):
         self.se_expand = nn.Sequential(
             GroupConv2D(out_channels, in_channels, bias=True),
         )
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        # self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.avg_pool = AvgPool()
         self.sigmoid = nn.Sigmoid()
         self.pointproduct = PointProduct()
 
@@ -232,7 +233,6 @@ class MixNet(nn.Module):
 
         self.conv = nn.Sequential(
             GroupConv2D(3, stem, kernel_size=3, stride=2, padding=1, bias=False),
-            # GroupConv2D(3, stem, kernel_size=3, stride=2, padding=0, bias=False),
             nn.ReLU(),
         )
 
@@ -248,7 +248,8 @@ class MixNet(nn.Module):
         )
 
         #self.avg_pool2d = nn.AvgPool2d(4)
-        self.adapt_avg_pool2d = nn.AdaptiveAvgPool2d((1, 1))
+        # self.adapt_avg_pool2d = nn.AdaptiveAvgPool2d((1, 1))
+        self.adapt_avg_pool2d = AvgPool()
 
         self.fc = nn.Sequential(
             nn.Dropout(p=dropout),

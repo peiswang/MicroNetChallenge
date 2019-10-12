@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['Swish', 'PointProduct', 'PointAdd']
+__all__ = ['Swish', 'PointProduct', 'PointAdd', 'AvgPool']
 
 
 class Swish(nn.Module):
@@ -32,3 +32,18 @@ class PointProduct(nn.Module):
 
     def forward(self, x1, x2):      
         return x1 * x2
+
+class AvgPool(nn.Module):
+    """
+    Average pooling layers. This is to make sure all operations (including accumulation) are conducted in FP16.
+    """
+    def __init__(self):
+        return super(AvgPool, self).__init__()
+
+    def forward(slef, x):
+        assert(x.dim() == 4)
+        N, C, H, W = x.shape
+        y = x.view(N*C, -1).mean(dim=1).view(N, C, 1, 1)
+
+        return y
+
