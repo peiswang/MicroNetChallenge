@@ -19,7 +19,7 @@ CUDA_VISIBLE_DEVICES=0 python score.py --pretrained pretrained/mixnet_s_prune_qu
   * int: Using fixed-length integers for accumulation. Bit-width for accumulator is selected to make assure no overflow. Other operations are conducted using FP16.
   * int16: Based on `int`, if bit-width > 16, then FP16 for accumulation.
   * fp16: Using FP16 for accumulation in convolution and inner-product layers.
-  * fp32: Using FP16 for accumulation in convolution and inner-product layers.
+  * fp32: Using FP32 for accumulation in convolution and inner-product layers.
 
 ### Our scores : 
 adder-type | op score | param score | final score
