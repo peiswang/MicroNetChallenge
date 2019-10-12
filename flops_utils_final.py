@@ -102,13 +102,21 @@ def count_conv_linear_adder_int16(module, input, output):
     if module.input_signed:
         base_bit_width -= 1
     addition_ops = 0
+
+    max_n_el = 0
     for kernel_idx in range(C):
         w_k = weight[kernel_idx].view(-1)
         n_el = get_nonzero_number(w_k)
-        addition_bits, max_bit = adder_tree(base_bit_width, n_el)
-        addition_ops += min(max_bit, 16) * (n_el - 1) * H * W
-        # addition_ops += addition_bits * H * W
-    # addition_ops += max(16, max_bit) * H * W * C
+        if n_el > max_n_el:
+            max_n_el = n_el
+    _, max_bit = adder_tree(base_bit_width, max_n_el)
+    max_bit = min(max_bit, 16)
+
+    for kernel_idx in range(C):
+        w_k = weight[kernel_idx].view(-1)
+        n_el = get_nonzero_number(w_k)
+        addition_ops += max_bit * (n_el - 1) * H * W
+
     addition_ops /= 32.
 
     # scale and bias in FP16 format
@@ -147,13 +155,20 @@ def count_conv_linear_adder_int(module, input, output):
     if module.input_signed:
         base_bit_width -= 1
     addition_ops = 0
+
+    max_n_el = 0
     for kernel_idx in range(C):
         w_k = weight[kernel_idx].view(-1)
         n_el = get_nonzero_number(w_k)
-        addition_bits, max_bit = adder_tree(base_bit_width, n_el)
+        if n_el > max_n_el:
+            max_n_el = n_el
+    _, max_bit = adder_tree(base_bit_width, max_n_el)
+
+    for kernel_idx in range(C):
+        w_k = weight[kernel_idx].view(-1)
+        n_el = get_nonzero_number(w_k)
         addition_ops += max_bit * (n_el - 1) * H * W
-        # addition_ops += addition_bits * H * W
-    # addition_ops += max(16, max_bit) * H * W * C
+
     addition_ops /= 32.
 
     # scale and bias in FP16 format

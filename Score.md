@@ -17,6 +17,7 @@ CUDA_VISIBLE_DEVICES=0 python score.py --pretrained pretrained/mixnet_s_prune_qu
 
   * tree: Using adder tree in convolution accumulation and FP16 in all the other operations.
   * int: Using fixed-length integers for accumulation. Bit-width for accumulator is selected to make assure no overflow. Other operations are conducted using FP16.
+  * int16: Based on `int`, if bit-width > 16, then FP16 for accumulation.
   * fp16: Using FP16 for accumulation in convolution and inner-product layers.
   * fp32: Using FP16 for accumulation in convolution and inner-product layers.
 
@@ -24,6 +25,7 @@ CUDA_VISIBLE_DEVICES=0 python score.py --pretrained pretrained/mixnet_s_prune_qu
 adder-type | op score | param score | final score
 ------------ | ------------- | ----------- | -----------------
 tree | **0.100732** | **0.049394** | **0.150126**
-int | 0.116038 | 0.049394 | 0.165433
+int | 0.117651 | 0.049394 | 0.167045
+int16 | 0.112664 | 0.049394 | 0.162058
 fp16 | 0.113956 | 0.049394 | 0.163350
 fp32 | 0.164937 | 0.049394 | 0.214332
