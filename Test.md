@@ -2,13 +2,15 @@
 
 ## How to test accuracy ?
 ```shell
-python test.py --resume ./model/densenet-100.pth.tar 
+python test.py --resume ./model/densenet-100.pth.tar --data-root ../../cifar
 ```
 
 
 ## Args :
 * --resume : `string`, the path to merged pruned quantized model
 * --half : `string`, can be one of 'True' or 'False', default is 'False', whether to run the network with half precision
+* --data-root : `string`, the root directory of cifar100 dataset. Please insure that you have already download the cifar100
+                dataset and sotred in the data-root directory. If not, you can download it with torchvision.
 
 ## Our accuracy : 
 |   float32   |  float16    |
