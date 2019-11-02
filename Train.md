@@ -18,7 +18,7 @@ AutoAugment can observably improve the network performance, however, the policy 
 was searched on cifar10 dataset, which is not allowed to use in this challenge. So we use a simplified 
 policy. Our policy consists of 14 tuples of <O, P, L>. For each input, we randomly select two tuples and 
 apply these two operations with corresponding probability and magnitude in sequence, the policy we 
-use can be seen at [transform.py](https://github.com/wps712/MicroNet/blob/cifar100/transform.py)
+use can be seen at [transform.py](https://github.com/wps712/MicroNetChallenge/blob/cifar100/transform.py)
 
 ## Training schedular
 Our training schedular can be decomposed into 8 steps:
