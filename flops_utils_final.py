@@ -58,12 +58,16 @@ def count_conv_linear_adder_tree(module, input, output):
     if module.input_signed:
         base_bit_width -= 1
     addition_ops = 0
+    max_bit_global = 0
     for kernel_idx in range(C):
         w_k = weight[kernel_idx].view(-1)
         n_el = get_nonzero_number(w_k)
         addition_bits, max_bit = adder_tree(base_bit_width, n_el)
         addition_ops += addition_bits * H * W
-    # print(max_bit)
+        assert(max_bit<23)
+        if max_bit > max_bit_global:
+            max_bit_global = max_bit
+    # print(max_bit_global)
     addition_ops /= 32.
 
     # scale and bias in FP16 format
@@ -111,6 +115,7 @@ def count_conv_linear_adder_int16(module, input, output):
             max_n_el = n_el
     _, max_bit = adder_tree(base_bit_width, max_n_el)
     max_bit = min(max_bit, 16)
+    print(max_bit)
 
     for kernel_idx in range(C):
         w_k = weight[kernel_idx].view(-1)
@@ -256,6 +261,9 @@ def count_quantization(module, input, output):
         quan_op = num_elements * 1.0 / 2.0 # num_elements * 4.0 / 2.0
         param = 1.0 / 2.0 # FP16
 
+    quan_op = 0.0 # num_elements * 3.0 / 2.0
+    param = 0.0 # FP16
+
     module.total_params = param
     module.total_ops += quan_op
 
@@ -280,7 +288,8 @@ def count_avgpool2d(module, input, output):
     add_per_output = H * W - 1
     mul_per_out = 1
     MAC_per_out = add_per_output + mul_per_out
-    total_ops = MAC_per_out * C / 2.
+    # total_ops = MAC_per_out * C / 2.
+    total_ops = MAC_per_out * C 
 
     module.total_ops += total_ops
     module.total_params = 0
@@ -291,7 +300,8 @@ def count_sigmoid(module, input, output):
     output = output[0]
 
     num_elements = output.numel()
-    total_ops = 3 * num_elements / 2.0
+    # total_ops = 3 * num_elements / 2.0
+    total_ops = 3 * num_elements
     module.total_ops += total_ops
     module.total_params = 0
 
@@ -301,7 +311,9 @@ def count_swish(module, input, output):
     output = output[0]
 
     num_elements = output.numel()
-    total_ops = 4 * num_elements / 2.0
+    # total_ops = 4 * num_elements / 2.0
+    # total_ops = 4 * num_elements
+    total_ops = 4 * num_elements
     module.total_ops += total_ops
     module.total_params = 0
 

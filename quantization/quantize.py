@@ -32,6 +32,22 @@ class QuantizationConfig:
             self.bit_width = int(bit_width)
             self.max_val = (1 << self.bit_width) - 1
             self.min_val = 0
+        elif quan_type.startswith('log'):
+            self.signed = True
+            self.method = 'log'
+            bit_width = quan_type[3:]
+            assert(bit_width.isdigit())
+            self.bit_width = int(bit_width)
+            self.max_val = 1 << ((1 << (self.bit_width-1)) - 2)
+            self.min_val = - self.max_val
+        elif quan_type.startswith('ulog'):
+            self.signed = False
+            self.method = 'log'
+            bit_width = quan_type[4:]
+            assert(bit_width.isdigit())
+            self.bit_width = int(bit_width)
+            self.max_val = 1 << ((1 << self.bit_width) - 2)
+            self.min_val = 0
         elif quan_type == 'float32':
             pass
         else:
@@ -39,7 +55,7 @@ class QuantizationConfig:
         
 
 class WeightQuantizer:
-    def __init__(self, model, quan_type, layer_type=(nn.Conv2d, nn.Linear)):
+    def __init__(self, model, quan_type, layer_type=(nn.Conv2d, nn.Linear), filterout_fn=None):
         self.num_quan_layers = 0
         self.target_modules = []
         self.target_params= []
@@ -52,6 +68,9 @@ class WeightQuantizer:
         for m_name, m in model.named_modules():
             if isinstance(m, layer_type):
                 index += 1
+                if filterout_fn is not None:
+                    if filterout_fn(index, m_name, m):
+                        continue
                 self.target_modules.append(m)
                 self.target_params.append(m.weight)
                 self.saved_tensor_params.append(m.weight.data.clone())
@@ -81,13 +100,57 @@ class WeightQuantizer:
     def set_scales(self, scales):
         self.scales = scales
 
+    def init_quantization(self, init_scales_path=None):
+        init_scales = None
+        if init_scales_path is not None:
+            init_scales = torch.load(init_scales_path)
+        for index in range(self.num_quan_layers):
+            quan_cfg = self.quan_cfgs[index]
+            if quan_cfg.quan_type == 'float32':
+                self.scales[index] = 1.0
+                print('layer', index, 'not quantized!')
+                continue
+
+            if init_scales is None or isinstance(init_scales[index], float) and init_scales[index] == 1.0:
+                s = self.target_params[index].data.size()
+                if self.multiscales[index]:
+                    w = self.target_params[index].data.view(s[0], -1)
+                else:
+                    w = self.target_params[index].data.view(1, -1)
+
+                alpha = w.abs().max(dim=1)[0] / quan_cfg.max_val
+                alpha_old = alpha * 1.1
+                count = 0
+                while((alpha-alpha_old).norm()>1e-9):
+                    q = self.quantize(w, alpha, quan_cfg)
+                    alpha_old = alpha
+                    alpha = (w*q).sum(dim=1) / (q*q).sum(dim=1)
+                    count += 1
+                self.scales[index] = alpha
+                w.view(s)
+                print(count)
+            else:
+                print('using init scales!')
+                self.scales[index] = init_scales[index]
+
     def quantize(self, w, alpha, quan_cfg):
         q = w / alpha.unsqueeze(1)
-        if quan_cfg.method == 'uniform':
+        if quan_cfg.method == 'log':
+            q_sign = q.sign()
+            q_abs = q.abs()
+            q_0_idx = q_abs<=0.5
+            q_thresh = (q_abs/1.5).log2() + 1
+            q_thresh[q_thresh<0] = 0
+            q = 2**(q_thresh.floor())
+            q = q * q_sign
+            q[q_0_idx] = 0
+            q.clamp_(quan_cfg.min_val, quan_cfg.max_val)
+        elif quan_cfg.method == 'uniform':
             q.round_().clamp_(quan_cfg.min_val, quan_cfg.max_val)
         return q
 
     def quantization(self):
+        self.clampConvParams()
         self.save_params()
         self.quantizeConvParams()
 
@@ -101,6 +164,22 @@ class WeightQuantizer:
                 w = self.target_params[index].data.view(1, -1)
             q = self.quantize(w, alpha, self.quan_cfgs[index])
             self.target_params[index].data.copy_(q.view(s))
+
+    def clampConvParams(self):
+        for index in range(self.num_quan_layers):
+            quan_cfg = self.quan_cfgs[index]
+            if quan_cfg.quan_type == 'float32':
+                continue
+
+            s = self.target_params[index].data.size()
+            if self.multiscales[index]:
+                w = self.target_params[index].data.view(s[0], -1)
+            else:
+                w = self.target_params[index].data.view(1, -1)
+            alpha = self.scales[index].unsqueeze(1)
+            q = w / alpha
+            q.clamp_(self.quan_cfgs[index].min_val, self.quan_cfgs[index].max_val)
+            self.target_params[index].data.copy_((q*alpha).view(s))
 
     def save_params(self):
         for index in range(self.num_quan_layers):
@@ -121,10 +200,179 @@ class WeightQuantizer:
             q = self.quantize(w, alpha, self.quan_cfgs[index])
             self.target_params[index].data.copy_((q*alpha.unsqueeze(1)).view(s))
 
+    def clip_grad(self, clip_val=0.01):
+        # global_grad = 0
+        for index in range(self.num_quan_layers):
+            self.target_modules[index].weight.grad.data[self.target_modules[index].weight.grad.data>clip_val] =clip_val
+            self.target_modules[index].weight.grad.data[self.target_modules[index].weight.grad.data<-clip_val] = -clip_val
+            # max_grad = self.target_modules[index].grad.data.view(-1).abs().max().item()
+            # print(max_grad)
+            # if global_grad < max_grad:
+            #     global_grad = max_grad
+        # print('global_max_grad:', global_grad)
+        # input('continue')
 
     def restore(self):
         for index in range(self.num_quan_layers):
             self.target_params[index].data.copy_(self.saved_tensor_params[index])
+
+    def quantization_onelayer(self, index):
+        self.saved_tensor_params[index].copy_(self.target_params[index].data)
+        alpha = self.scales[index]
+        s = self.target_params[index].data.size()
+        if self.multiscales[index]:
+            w = self.target_params[index].data.view(s[0], -1)
+        else:
+            w = self.target_params[index].data.view(1, -1)
+        q = self.quantize(w, alpha, self.quan_cfgs[index])
+        self.target_params[index].data.copy_((q*alpha.unsqueeze(1)).view(s))
+
+    def get_sparsity(self):
+        n_elements = 0
+        n_nonzeros = 0
+        for index in range(self.num_quan_layers):
+            s = (self.target_params[index].data.view(-1).abs()>0)
+            n_elements += s.numel()
+            n_nonzeros += s.sum().item()
+            s = s.sum().item()/s.numel()
+            # print(s)
+            self.sparsity[index] = s
+        return 1.0 * (n_elements - n_nonzeros) / n_elements
+        
+
+##########################
+
+# class QuantizeF(torch.autograd.Function):
+# 
+#     @staticmethod
+#     def forward(self, input, scale, min_val, max_val):
+#         self.scale = scale
+#         self.min_val = min_val
+#         self.max_val = max_val
+#         self.save_for_backward(input)
+#         output = (input / scale).round().clamp(min_val, max_val) * scale
+#         return output
+# 
+#     @staticmethod
+#     def backward(self, grad_output):
+#         input, = self.saved_tensors
+#         grad_input = grad_output.clone()
+#         grad_input[input.ge(self.max_val * self.scale)] = 0
+#         grad_input[input.le(self.min_val * self.scale)] = 0
+#         return grad_input, None, None, None
+
+# class Round(torch.autograd.Function):
+#     def forward(self, input):
+#         output = torch.round(input)
+#         return output.float()
+# 
+#     def backward(self, grad_output):
+#         return grad_output
+
+# class Quantization(nn.Module):
+#     def __init__(self):
+#         super(Quantization, self).__init__()
+#         self.bit_width = None
+#         self.scale = None
+#         self.out_scale = None
+#         self.enabled = False
+#         self.signed = None
+#         self.init = False
+# 
+#     def forward(self, input):
+#         if self.init:
+#             self.init_quantization(input.cpu().view(-1).numpy())
+#             return input
+#         else:
+#             y = input
+#             if self.enabled:
+#                 y = torch.clamp(Round()(input/self.scale), self.min_val, self.max_val) * self.out_scale
+#             return y
+# 
+#     def set_init(self, init):
+#         self.init = init
+# 
+#     def enable_quantization(self):
+#         self.enabled = True
+# 
+#     def disable_quantization(self):
+#         self.enabled = False
+# 
+#     def set_bitwidth(self, bit_width):
+#         self.bit_width = bit_width
+# 
+#     def set_scale(self, scale):
+#         self.scale = scale
+#         self.out_scale = scale
+# 
+#     def set_out_scale(self, scale):
+#         self.out_scale = scale
+# 
+#     # def sign_infer(self, x):
+#     #     x_min = np.min(x)
+#     #     if x_min < 0:
+#     #         self.signed = True
+#     #         self.max_val = (1 << (self.bit_width - 1)) - 1
+#     #         self.min_val = - self.max_val
+#     #     else:
+#     #         self.signed = False
+#     #         self.max_val = (1 << self.bit_width) - 1
+#     #         self.min_val = 0
+# 
+#     def set_sign(self, signed):
+#         self.signed = signed
+#         if self.signed:
+#             self.max_val = (1 << (self.bit_width - 1)) - 1
+#             self.min_val = - self.max_val
+#         else:
+#             self.max_val = (1 << self.bit_width) - 1
+#             self.min_val = 0
+# 
+#     def set_quantization_parameters(self, signed=None, bit_width=None, scale=None):
+#         assert(bit_width is not None and scale is not None)
+#         self.set_bitwidth(bit_width)
+#         self.set_sign(signed)
+#         self.set_scale(scale)
+#         
+#     def init_quantization(self, x, alpha=None):
+#         x_max = np.max(x)
+#         x_min = np.min(x)
+#         print("x.max", x_max)
+#         print("x.min", x_min)
+# 
+#         if x_min < 0:
+#             print('\tInt'+str(self.bit_width), 'quantization')
+#             self.signed = True
+#             self.max_val = (1 << (self.bit_width - 1)) - 1
+#             self.min_val = - self.max_val
+#         else:
+#             print('\tUint'+str(self.bit_width), 'quantization')
+#             self.signed = False
+#             self.max_val = (1 << self.bit_width) - 1
+#             self.min_val = 0
+#             x = x[x>0]
+# 
+#         circle_detection_queue = [0,]*5
+# 
+#         if alpha is None:
+#             alpha = np.max(np.fabs(x)) / self.max_val
+#         alpha_old = alpha * 0
+#         n_iter = 0
+#         circle_detection_queue[n_iter] = alpha
+#         while(np.sum(alpha!=alpha_old)):
+#             q = x / alpha
+#             q = np.clip(np.round(q), self.min_val, self.max_val)
+# 
+#             alpha_old = alpha;
+#             alpha = np.sum(x*q) / np.sum(q*q)
+# 
+#             if alpha in circle_detection_queue:
+#                 break
+#             n_iter += 1
+#             circle_detection_queue[n_iter%5] = alpha
+#         self.scale = alpha
+#         self.set_scale(scale)
+#         return self.scale, self.signed
 
 class Quantization(nn.Module):
     def __init__(self):
@@ -138,6 +386,7 @@ class Quantization(nn.Module):
     def forward(self, input):
         y = input
         if self.enabled:
+            # y = torch.clamp(torch.round(input/self.scale.to(input.device)), self.min_val, self.max_val) * self.out_scale.to(input.device)
             y = torch.clamp(torch.round(input/self.scale), self.min_val, self.max_val) * self.out_scale
         return y
 
