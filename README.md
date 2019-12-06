@@ -26,7 +26,7 @@ git checkout cifar100
 
 ### References
 * [Pretrained model](https://github.com/rwightman/gen-efficientnet-pytorch) 
-  * - We use pretrained models from this repository.
+  * We use pretrained models from this repository.
 * [hessamb/label-refinery](https://github.com/hessamb/label-refinery) 
-  * - Label refinery code from this repository.
+  * Label refinery code from this repository.
 
