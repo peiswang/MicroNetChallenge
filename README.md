@@ -1,6 +1,6 @@
 # MicroNetChallenge
 
-## MicroNet Challenge ImageNet Track
+## MicroNet Challenge
 
 ### 1. [Training strategy](./Train.md)
 ### 2. [Test Acc](Test.md)
@@ -23,3 +23,10 @@
 ```
 git checkout cifar100
 ```
+
+### References
+* [Pretrained model](https://github.com/rwightman/gen-efficientnet-pytorch) 
+  * - We use pretrained models from this repository.
+* [hessamb/label-refinery](https://github.com/hessamb/label-refinery) 
+  * - Label refinery code from this repository.
+
