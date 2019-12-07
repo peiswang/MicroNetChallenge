@@ -180,17 +180,17 @@ class DenseNet(nn.Module):
 
 
     def forward(self, x):
-        if self.prune_fc:
-          with torch.no_grad():
-            x = self.conv1(x)
-            x = self.trans1(self.dense1(x)) 
-            x = self.trans2(self.dense2(x)) 
-            x = self.dense3(x)
-            x = self.bn(x)
-            x = self.relu(x)
+#        if self.prune_fc:
+#          with torch.no_grad():
+        x = self.conv1(x)
+        x = self.trans1(self.dense1(x)) 
+        x = self.trans2(self.dense2(x)) 
+        x = self.dense3(x)
+        x = self.bn(x)
+        x = self.relu(x)
 
-            x = self.avgpool(x)
-            x = x.view(x.size(0), -1)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
         x = self.fc(x)
 
 
