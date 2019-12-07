@@ -28,8 +28,6 @@ Our training schedular can be decomposed into 8 steps:
 * prune the convolution layers of student net with sparsity of 75%, train with teacher-student (300 epochs)
 * quantize the activations of convolution layers of student net to 4bit, exclude the first convolution layer, train with teacher-student (300 epochs)
 * quantize the weights of convolution layers of student net to 4bit, train with teacher-student (300 epochs)
-* update means and vars for BN layers, to do that, simply set the student net to train mode, and run network forward on train-set for 
-  10 epochs
 * prune the weight of fc layer with sparsity of 50%, train with teacher-student (50 epochs, previous layers fixed)
 * quantize the weight of fc layer to 4bit, train with teacher-student (50 epochs, previous layers fixed)
 
@@ -46,3 +44,7 @@ We set the weight decay to 1e-4, and momentum to 0.9
 ### Loss
 For step 1 and 2, we use the cross entropy loss.
 For those steps training with teacher-student, we use the kl divergence loss
+Suppose that x is the output of the student model, y is the output of the 
+teacher model, we find that the loss KL(x | y) performs better than KL(y | x),
+to do that, please simply set the --loss argument to kl:1. Where `kl` denotes 
+the name of loss function, and `1` denotes the direction of loss function.
