@@ -346,22 +346,6 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
-    print('upbn...')
-    upbn(train_loader, model, args, 300, weight_quantizer)
-    validate(val_loader, model, criterion, args, weight_quantizer)
-
-    # save model after upbn
-    state_dict = model.state_dict()
-    new_state_dict = OrderedDict()
-    best_path = os.path.join(args.save_path, 'mixnet_prune_quan_act_' + str(args.act_bit_width) + 'bit_weight_5_4bit_upbn.pth')
-    for key in state_dict.keys():
-        if 'module.' in key:
-            new_state_dict[key.replace('module.', '')] = state_dict[key].cpu()
-        else:
-            new_state_dict[key] = state_dict[key].cpu()
-    torch.save(new_state_dict, best_path)
-
-
 def train(train_loader, teacher_model, model, criterion, optimizer, epoch, args, weight_quantizer=None):
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -493,27 +477,6 @@ def validate(val_loader, model, criterion, args, weight_quantizer=None):
         weight_quantizer.restore()
 
     return top1.avg
-
-
-def upbn(train_loader, model, args, maxiter=300, weight_quantizer=None):
-    # switch to train mode
-    model.train()
-
-    if weight_quantizer:
-        weight_quantizer.quantization()
-
-    with torch.no_grad():
-        for i, (input, target) in enumerate(train_loader):
-            if i == maxiter:
-                break
-            if args.gpu is not None:
-                input = input.cuda(args.gpu, non_blocking=True)
-            #target = target.cuda(args.gpu, non_blocking=True)
-            # compute output
-            output = model(input)
-
-    if weight_quantizer:
-        weight_quantizer.restore()
 
 
 def save_checkpoint(state, is_best, path='./', filename='checkpoint'):

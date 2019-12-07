@@ -17,7 +17,7 @@
 
 * PIL-5.1.0
 
-### score : 0.125144
+### score : 0.12947
 
 ## MicroNet Challenge Cifar100 Track
 ```
@@ -27,6 +27,8 @@ git checkout cifar100
 ### References
 * [Pretrained model](https://github.com/rwightman/gen-efficientnet-pytorch) 
   * We use pretrained models from this repository.
-* [hessamb/label-refinery](https://github.com/hessamb/label-refinery) 
+* [label-refinery](https://github.com/hessamb/label-refinery) 
   * Label refinery code from this repository.
+* [pytorch-OpCounter](https://github.com/Lyken17/pytorch-OpCounter) 
+  * Op counter code from this repository.
 

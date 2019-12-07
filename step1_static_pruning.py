@@ -388,6 +388,8 @@ def train(train_loader, teacher_model, model, criterion, optimizer, epoch, args)
                   'LR: {lr: .8f}'.format(
                    epoch, i, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss_kd=losses_kd, top1=top1, top5=top5, lr=local_lr))
+        if i == 200:
+            break
 
 def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter()

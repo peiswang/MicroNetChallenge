@@ -291,3 +291,43 @@ class Quantization(nn.Module):
         self.set_sign(signed)
         self.set_scale(scale)
         
+    def init_quantization(self, x, alpha=None):
+        x_max = np.max(x)
+        x_min = np.min(x)
+        print("x.max", x_max)
+        print("x.min", x_min)
+
+        if x_min < 0:
+            print('\tInt'+str(self.bit_width), 'quantization')
+            self.signed = True
+            self.max_val = (1 << (self.bit_width - 1)) - 1
+            self.min_val = - self.max_val
+        else:
+            print('\tUint'+str(self.bit_width), 'quantization')
+            self.signed = False
+            self.max_val = (1 << self.bit_width) - 1
+            self.min_val = 0
+            x = x[x>0]
+
+        circle_detection_queue = [0,]*5
+
+        if alpha is None:
+            alpha = np.max(np.fabs(x)) / self.max_val
+        alpha_old = alpha * 0
+        n_iter = 0
+        circle_detection_queue[n_iter] = alpha
+        while(np.sum(alpha!=alpha_old)):
+            q = x / alpha
+            q = np.clip(np.round(q), self.min_val, self.max_val)
+
+            alpha_old = alpha;
+            alpha = np.sum(x*q) / np.sum(q*q)
+
+            if alpha in circle_detection_queue:
+                break
+            n_iter += 1
+            circle_detection_queue[n_iter%5] = alpha
+        # self.scale = alpha
+        # self.set_scale(scale)
+        # return self.scale, self.signed
+        return alpha, self.signed

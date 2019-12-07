@@ -136,7 +136,7 @@ target_sparsity = np.asarray([0.3, 0, 0.4, # stem, layer0
                         0.6, 0.7])
 
 
-signed = [True, False, False, True, True, False, False, False, True, True, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False]
+signed = [None, False, False, True, True, False, False, False, True, True, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False]
 
 def main():
     args = parser.parse_args()
@@ -291,7 +291,8 @@ def quantize(train_dataset, model, args):
         return int(y)
 
     # act_sta_len = 3000000
-    act_sta_len = 2000000
+    # act_sta_len = 2000000
+    act_sta_len = 100000
     feat_buf = np.zeros(act_sta_len)
 
     scales = np.zeros(len(quan_modules))
