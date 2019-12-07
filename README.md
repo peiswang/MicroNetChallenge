@@ -1,6 +1,6 @@
 # MicroNetChallenge
 
-## MicroNet Challenge
+## MicroNet Challenge ImageNet Track
 
 ### 1. [Training strategy](./Train.md)
 ### 2. [Test Acc](Test.md)
@@ -17,7 +17,7 @@
 
 * PIL-5.1.0
 
-### score : 0.12947
+### Score : 0.12947
 
 ## MicroNet Challenge Cifar100 Track
 ```
