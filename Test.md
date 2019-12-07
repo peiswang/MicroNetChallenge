@@ -5,7 +5,6 @@
 python test.py --resume ./model/densenet-100.pth.tar --data-root ../../cifar
 ```
 
-
 ## Args :
 * --resume : `string`, the path to merged pruned quantized model
 * --half : `string`, can be either 'True' or 'False', default is 'False', whether to run the network with half precision
@@ -16,3 +15,8 @@ python test.py --resume ./model/densenet-100.pth.tar --data-root ../../cifar
 |   float32   |  float16    |
 |-------------|-------------|
 |  **80.39%** |  **80.17%** |
+
+If you cannot get this accuracy with our model, please check your 
+torchvision version. Because the definition of ToTensor transform of 
+older version of torchvision is different from that of newer version 
+of torchvision.
