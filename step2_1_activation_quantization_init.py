@@ -280,6 +280,8 @@ def main_worker(gpu, ngpus_per_node, args):
 
 def quantize(train_dataset, model, args):
 
+    model.eval()
+
     def get_safelen(x):
         # Assuming more than 1/10 values are valid (i.e., positive values for unsigned quantization).
         # For each batch, we sample 10^(k-1) values (k=floor(ln(feat_len))).
@@ -291,8 +293,8 @@ def quantize(train_dataset, model, args):
         return int(y)
 
     # act_sta_len = 3000000
-    # act_sta_len = 2000000
-    act_sta_len = 100000
+    act_sta_len = 2000000
+    # act_sta_len = 100000
     feat_buf = np.zeros(act_sta_len)
 
     scales = np.zeros(len(quan_modules))
@@ -365,7 +367,7 @@ def validate(val_loader, model, criterion, args):
 
     # switch to evaluate mode
     model.eval()
-    prune_op.pruning()
+    # prune_op.pruning()
     # print('Sparsit:', prune_op.get_sparsity())
 
     with torch.no_grad():
@@ -400,7 +402,7 @@ def validate(val_loader, model, criterion, args):
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
 
-        prune_op.restore()
+        # prune_op.restore()
 
 
     return top1.avg

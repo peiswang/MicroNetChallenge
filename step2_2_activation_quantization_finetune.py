@@ -277,8 +277,8 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.pretrained:
         state_dict = torch.load(args.pretrained)
         if 'state_dict' in state_dict:
-            state_dict = state_dict['state_dict']
             prune_op.set_masks(state_dict['masks'])
+            state_dict = state_dict['state_dict']
 
         new_state_dict = OrderedDict()
         for key_ori, key_pre in zip(model.state_dict().keys(), state_dict.keys()):
@@ -431,8 +431,7 @@ def validate(val_loader, model, criterion, args):
 
     # switch to evaluate mode
     model.eval()
-    prune_op.pruning()
-    # print('Sparsit:', prune_op.get_sparsity())
+    print('Sparsit:', prune_op.get_sparsity())
 
     with torch.no_grad():
         end = time.time()
@@ -466,9 +465,6 @@ def validate(val_loader, model, criterion, args):
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
-
-        prune_op.restore()
-
 
     return top1.avg
 
